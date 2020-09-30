@@ -1,0 +1,114 @@
+import speech_recognition as sr
+import pyttsx3
+from datetime import datetime as dt
+import pyaudio
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+
+def MOM() :
+
+    k = []
+
+    df = pd.DataFrame( pd.read_excel( "X.xlsx", "DATA" ) )
+    column_count = len( df.columns )
+    name_array = []
+    
+    for i in range( column_count ) : 
+        name_array.append( df.columns[i] )
+    
+    row_count = len( df[name_array[0]] )
+
+    date = dt.now()
+    engine = pyttsx3.init()
+        
+    for start in range( row_count ) :
+        q_category = str( df[name_array[0]][start] )
+        q_keyword = str( df[name_array[1]][start] )
+
+        q_tem_keyword = ""
+        for i in range( len(q_keyword) ) :
+            q_tem_keyword += "땡"
+
+        # x_keyword = q_category + " 문제 입니다. " + "다음의 " + q_tem_keyword + "에 들어갈 단어는 무엇인가요?"
+        # x_keyword = "다음의 " + q_tem_keyword + "에 들어갈 단어는 무엇인가요?"
+
+        # print( x_keyword )
+        engine.say( "문제 출제" )
+        engine.runAndWait()
+        
+        try :
+            req = requests.get("https://terms.naver.com/search.nhn?query=" + q_keyword + "&searchType=text")
+            # req = requests.get("https://ko.wikipedia.org/wiki/" + q_keyword)
+            html = req.text
+
+            soup = BeautifulSoup(html, 'html.parser')
+
+            a_list = soup.select("#content > div > div.search_group > h4 > strong > a")
+            a_list_cnt = 0
+
+            for o in range( len(a_list) ) : #a_list :
+                if a_list[o].string == q_keyword :
+                    a_list_cnt = o+2
+
+            try :
+                desc = str( soup.select_one("#content > div:nth-of-type(" + str(a_list_cnt) + ") > div.search_group > h4 > span").text )
+                print("문제 :", desc)
+            except : 
+                desc = str( soup.select_one("#content > div:nth-of-type(" + str(a_list_cnt-1) + ") > div.search_group > h4 > span").text )
+                print("문제 :", desc)
+            #     desc = str( soup.select_one("#mw-content-text > div.mw-parser-output > p:nth-of-type(1)").text ).strip()
+            #     print("문제 :", desc)
+            # finally :
+            #     desc = str( soup.select_one("#mw-content-text > div.mw-parser-output > p:nth-of-type(2)").text ).strip()
+            #     print("문제 :", desc) 
+
+            desc = desc.replace(q_keyword, q_tem_keyword)
+
+            k.append( desc )
+            engine.say(desc)
+            engine.runAndWait()
+
+            import time 
+
+            engine.say("정답은 바로 무엇인가요?")
+            engine.runAndWait()
+
+            myVoice = sr.Recognizer()
+            myMic = sr.Microphone()
+            my_Text = ""
+
+            # while True :
+            #     try :
+            #         with myMic as source :
+            #             audio = myVoice.listen(source, timeout = None, phrase_time_limit = None, snowboy_configuration = None)
+            #             myText = myVoice.recognize_google(audio, language = 'ko-KR')
+            #             print("당신의 정답 -> ", myText)
+            #             break
+
+            #         if "그만" in myText :
+            #             engine.say("학습종료하겠습니다.")
+            #             engine.runAndWait()
+            #             break
+            
+            #     except Exception as error :
+            #         print( "말씀해주세요. 기다리겠습니다." )
+            #         continue
+
+            # if myText == q_keyword :
+            #     engine.say("정답입니다.")
+            #     engine.runAndWait()
+            #     print( "정답입니다.", q_keyword )
+            # else :
+            #     engine.say("틀렸습니다. 정답은" + q_keyword + " 입니다.")
+            #     engine.runAndWait()
+            #     print( "틀렸습니다. 정답은", q_keyword )
+
+        except Exception as error :
+            pass
+
+    p = pd.DataFrame( k )
+    p.to_excel("hhhhhh.xlsx")
+
+if __name__ == "__main__" :
+    MOM()
